@@ -1,0 +1,82 @@
+ ZeroTier Своя частная сеть.
+
+    ГЛАВНАЯ
+    УСЛУГИ
+    НАШИ СТАТЬИ
+    НАШИ КЛИЕНТЫ
+
+связьснами
+
+2AB6D3AC 
+
++7 (499) 322-96-38
+
+info@prochor.ru 
+
+У меня был вариант использования сети ZeroTier через Интернет.
+Моей основной целью было подключение моего контроллера к коневым Planet через Интернет.
+
+Главная особенность для меня заключается в том, что ZeroTier - это сеть уровня 2,
+которая просто отображается как интерфейс в Linux с MTU 2800.
+Возможности соединения сети ZeroTier с физическим интерфейсом в Linux и размер MTU 2800.
+
+Как правило, установка и настройка сети ZeroTier очень проста ( даже проще, если вы доверяете случайным сценариям bash из Интернета).
+К сожалению, мы не хотим, чтобы наши узлы проходили через центральный контроллер ZeroTier, поэтому это немного усложняет задачу. К счастью, в Key Networks есть ZTNCUI, который является контроллером с открытым исходным кодом. Его компоновка не так хороша, как у MyZeroTier Controller, но у него почти все те же функции.
+Концепция Planets и LEAF ZeroTier означает, что по умолчанию ваш узел будет пытаться связаться с 2 контроллерами, контролируемыми ZeroTier (Alice и Bob). ZeroTier имеет 12 серверов на каждый контроллер, к которым ваш узел может попытаться подключиться. Настройка собственных планет - это не то, что просто поддерживается в текущей версии 1.2.12. Опять же, мы вообще не хотим, чтобы наша сеть общалась с ZeroTier. Если вы действительно хотите управлять своими собственными планетами, вам необходимо создать свой собственный файл планет.
+
+Вот шаги, которые я использовал для создания собственного файла Planets.
+
+Скачайте ZeroTier с Github:
+git clone https://github.com/zerotier/ZeroTierOne.git
+
+Зайдите в папку world по адресу ZeroTierOne/attic/world
+cd ZeroTierOne/attic/world
+
+Отредактируйте файл mkworld.cpp. Удалите IP-адреса контроллеров ZeroTier и добавьте свои собственные. ZeroTier имеет 2 контроллера, но можно добавить и другие.
+
+В файле identity.public можно наяти интересующую информацию Identity
+/var/lib/zerotier-one/identity.public
+
+mcedit mkworld.cpp
+
+// Prochor
+roots.push_back(World::Root());
+roots.back().identity = Identity("ebXXXXX6d:0:04xxxxxxxxxxxxxxxxxxxxxxxxxxx8c");
+roots.back().stableEndpoints.push_back(InetAddress("XX.XX.XX.XX/9993")); // Moscow
+
+Выполнить команду
+source ./build.sh
+
+Если debian bash: c++: команда не найдена
+apt-get install gcc g++
+
+Запустите файл mkworld
+./mkworld
+
+Должен быть создан новый файл world.bin. Это будет файл, который нужен всем вашим узлам.
+Скопируйте файл world.bin в папку ZeroTier-One (работает в Linux)
+
+cp world.bin /var/lib/zerotier-one/planet
+
+Проверяем Peer до
+root@ZEROTIER:/home/administrator/ZeroTierOne/attic/world# /sbin/zerotier-cli listpeers
+200 listpeers <ztaddr> <path> <latency> <version> <role>
+200 listpeers 3feXXX258 192.168.0.207/9993;14100;14099 2 1.4.0 LEAF
+200 listpeers 61dXCXXcb 50.7.73.34/9993;3990;3812 178 - PLANET
+200 listpeers 62XXXXe71 50.7.252.138/9993;3990;3737 253 - PLANET
+200 listpeers 6eXXXX3e 192.168.0.206/21136;7371;7370 0 1.4.0 LEAF
+200 listpeers 778XXXX190 103.195.103.66/9993;3990;3853 137 - PLANET
+200 listpeers 99XXXXdb7 195.181.173.159/9993;3990;3948 42 - PLANET
+200 listpeers d0XXXX4ef 192.168.9.254/21140;9263;9263 -1 1.6.5 LEAF
+
+Перезапустить ZeroTier
+systemctl restart zerotier-one.service
+
+Проверяем Peer после
+root@ZEROTIER:/home/administrator/ZeroTierOne/attic/world# /sbin/zerotier-cli listpeers
+200 listpeers <ztaddr> <path> <latency> <version> <role>
+200 listpeers 3fXXXXXX58 192.168.9.207/34526;27;26 1 1.4.0 LEAF
+200 listpeers 6eXXXXXX3e 192.168.9.206/21136;1959;1959 1 1.4.0 LEAF
+200 listpeers d0XXXXXXef 192.168.9.254/21141;5077;977 3 1.6.5 LEAF
+
+Удачи всем!
